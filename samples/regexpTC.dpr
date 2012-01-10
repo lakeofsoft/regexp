@@ -119,9 +119,10 @@ begin
   with (unaRegExp.create('([0-9]+),?')) do try
     //
     subj := replace('\1', s, 1, true);	// remove all commas
+    regexp := '[0-9]+';
+    //
     repeat
       //
-      regexp := '[0-9]+';
       m := match();
       if ('' <> m) then begin
 	//
