@@ -1345,6 +1345,11 @@ function sameString(const str1, str2: waString; doTrim: bool = true; locale: LCI
 {$ENDIF __AFTER_D5__ }
 
 {*
+	Reverses characters in a string
+}
+function revStr(const a: string): string;
+
+{*
   Adjusts a string length to the len value, by adding additional character at the beginning (left = true) or at the end (left = false) of the string.
 }
 function adjust(const value: string; len: int; fill: char = ' '; left: bool = true; truncate: bool = false): string; overload;
@@ -1919,6 +1924,10 @@ function swap16i(w: int16): int16;{$IFDEF UNA_OK_INLINE }inline;{$ENDIF UNA_OK_I
 }
 function swap32u(w: uint32): uint32;{$IFDEF UNA_OK_INLINE }inline;{$ENDIF UNA_OK_INLINE }
 function swap32i(w: int32): int32;{$IFDEF UNA_OK_INLINE }inline;{$ENDIF UNA_OK_INLINE }
+{*
+	LSB64 <-> MSB64, sorts 8 bytes in reverse order.
+}
+function swap64u(w: uint64): uint64;{$IFDEF UNA_OK_INLINE }inline;{$ENDIF UNA_OK_INLINE }
 
 
 {*
@@ -5818,6 +5827,17 @@ end;
 
 
 // --  --
+function revStr(const a: string): string;
+var
+  i: int32;
+begin
+  setLength(result, length(a));
+  for i := 1 to length(a) shr 1 do
+    result[i] := a[length(a) - i];
+end;
+
+
+// --  --
 function adjust(const value: string; len: int; fill: char; left: bool; truncate: bool): string;
 begin
   len := abs(len);
@@ -8159,56 +8179,56 @@ end;
 
 // --  --
 // The function returns the initial value of the Destination parameter.
-function InterlockedCompareExchange(var Destination: int; Exchange: int; Comparand: int): int;
+function InterlockedCompareExchange(var destination: int; exchange: int; comparand: int): int;
 asm                                   //RCX               RDX            R8
-        .NOFRAME
-        mov     rax, Comparand
-  lock  cmpxchg [Destination], Exchange // (RAX == [Destination]) ?
-                                        //   YEP: [Destination] <= Exchange
-                                        //  NOPE: RAX <= [Destination]
+	.NOFRAME
+	mov     rax, comparand
+  lock  cmpxchg [destination], exchange // (RAX == [Destination]) ?
+					//   YEP: [Destination] <= Exchange
+					//  NOPE: RAX <= [Destination]
 end;
 
   {$ELSE }
 
 // --  --
 // The function returns the initial value of the Addend parameter.
-function InterlockedExchangeAdd(var Addend: int; value: int): int;
+function InterlockedExchangeAdd(var addend: int; value: int): int;
 asm                             //  EAX          EDX
-        mov     ecx, eax
-        mov     eax, edx
+	mov     ecx, eax
+	mov     eax, edx
   lock  xadd    [ecx], eax   //      TEMP <= [ecx] + EAX
-                             //       EAX <= [ecx]
-                             //     [ecx] <= TEMP
+			     //       EAX <= [ecx]
+			     //     [ecx] <= TEMP
 end;
 
 // --  --
 // The function returns the resulting incremented value.
-function InterlockedIncrement(var Addend: int): int;
+function InterlockedIncrement(var addend: int): int;
 asm                           //  EAX
         mov     edx, 1
-  lock  xadd    [Addend], edx
-        inc     edx
-        mov     eax, edx
+  lock  xadd    [addend], edx
+	inc     edx
+	mov     eax, edx
 end;
 
 // --  --
 // The function returns the resulting decremented value.
-function InterlockedDecrement(var Addend: int): int;
+function InterlockedDecrement(var addend: int): int;
 asm                           //  EAX
-        mov     edx, -1
-  lock  xadd    [Addend], edx
-        dec     edx
-        mov     eax, edx
+	mov     edx, -1
+  lock  xadd    [addend], edx
+	dec     edx
+	mov     eax, edx
 end;
 
 // --  --
 // The function returns the initial value of the Destination parameter.
-function InterlockedCompareExchange(var Destination: int; Exchange: int; Comparand: int): int;
+function InterlockedCompareExchange(var destination: int; exchange: int; comparand: int): int;
 asm                                   //EAX               EDX            ECX
-        xchg    eax, ecx
+	xchg    eax, ecx
   lock  cmpxchg [ecx], edx      // (EAX == [ecx]) ?
-                                //   YEP: [ecx] <= edx
-                                //  NOPE: EAX <= [ecx]
+				//   YEP: [ecx] <= edx
+				//  NOPE: EAX <= [ecx]
 end;
 
   {$ENDIF CPU64 }
@@ -10071,6 +10091,12 @@ end;
 function swap32i(w: int32): int32;
 begin
   result := int32(swap32u(uint32(w)));
+end;
+
+// --  --
+function swap64u(w: uint64): uint64;
+begin
+  result := uint64((uint64(swap32u(w and $FFFFFFFF)) shl 32)) or swap32u(w shr 32);
 end;
 
 // --  --

@@ -37,6 +37,7 @@
 
 	@Author Lake
 	@Version 2.5.2011.12 First release
+	@Version 2.5.2012.01 - some fixes of * handling
 }
 
 unit
@@ -101,6 +102,17 @@ procedure disposeEA(var ea: pointer);
 	@return position of new match, or one of unaRE_error_XXX error codes
 }
 function rematch(const subject, regexp: wString; out matchlen: int; startFrom: int = 1): int; overload;
+
+{*
+	Looks for first match from specified position.
+
+	@param subject text to find the match in
+	@param regexp regular expression
+	@param startFrom start lookup from this position (from 1 to length(subject) )
+
+	@return first match, or empty string
+}
+function rematch(startFrom: int; const subject, regexp: wString): string; overload;
 
 {*
 	Looks for first match from specified position.
@@ -363,7 +375,11 @@ type
   pEA 	= ^EA;
   EA 	= record
     //
+    // NOTE!! If you add/remove any fields below, make sure you visit the addE() local routine in parse() function below
     r_c: int32;
+    r_foundSome: bool;
+    // NOTE!! If you add/remove any fields above, make sure you visit the addE() local routine in parse() function below
+    //
     r_a: array[word] of E;
   end;
 
@@ -406,7 +422,7 @@ var
     //
     result := c;
     inc(c);
-    mrealloc(ea, sizeof(ea.r_c) + c * sizeof(ea.r_a[0]));
+    mrealloc(ea, sizeof(ea.r_c) + sizeof(ea.r_foundSome) + c * sizeof(ea.r_a[0]));
     ea.r_c := c;
     //
     exp := @ea.r_a[result];
@@ -951,6 +967,9 @@ begin
       //
       if (matched(ea, el, subj, lastmatch, lMin, lMax, backRef)) then begin
 	//
+	if (el.r_type <> et_subexp) then
+	  ea.r_foundSome := true;
+	//
 	inc(rcount);
 	//
 	inc(minLen, lMin);
@@ -977,6 +996,9 @@ begin
       for r := rcount + 1 to maxR do begin
 	//
 	if (matched(ea, el, subj, lastmatch, lMin, lMax, backRef)) then begin
+	  //
+	  if (el.r_type <> et_subexp) then
+	    ea.r_foundSome := true;
 	  //
 	  matchLenLast := lMin;
 	  inc(maxLen, lMax);
@@ -1022,11 +1044,17 @@ begin
       el.r_eatsMin := minLen;
       el.r_eatsMax := maxLen;
       //
-      if ((et_subexp = el.r_type) and ((1 > el.r_fitAt) or (fitAt < el.r_fitAt))) then
-	el.r_fitAt := fitAt
+      if ((0 < maxLen) or (index < ea.r_c - 1) or ea.r_foundSome) then begin
+	//
+	if ((et_subexp = el.r_type) and ((1 > el.r_fitAt) or (fitAt < el.r_fitAt))) then
+	  el.r_fitAt := fitAt
+	else
+	  if (et_subexp <> el.r_type) then
+	    el.r_fitAt := fitAt;
+	//
+      end
       else
-	if (et_subexp <> el.r_type) then
-	  el.r_fitAt := fitAt;
+        result := false;
     end;
   end;
 end;
@@ -1039,6 +1067,8 @@ begin
   matchlen := 0;
   //
   if ((nil <> ea) and (et_subexp = ea.r_a[0].r_type)) then begin
+    //
+    ea.r_foundSome := false;
     //
     result := unaRE_error_noMatch;
     while (lastmatch <= length(subject)) do begin
@@ -1225,6 +1255,18 @@ begin
   finally
     disposeEA(pointer(ea));
   end
+end;
+
+// --  --
+function rematch(startFrom: int; const subject, regexp: wString): string;
+var
+  p, mlen: int;
+begin
+  p := rematch(subject, regexp, mlen, startFrom);
+  if (1 < mlen) then
+    result := copy(subject, p, mlen)
+  else
+    result := '';
 end;
 
 // --  --

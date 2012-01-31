@@ -546,6 +546,14 @@ type
     procedure setItem(index: int; item: pointer; doFree: unsigned = 2); overload;
     function setItem(itemToReplace: pointer; newItem: pointer; doFree: unsigned = 2): unsigned; overload;
     {*
+	Locks an object in the list.
+	Don't forget to release the object.
+
+	@return nil if object was not found or was not locked.
+    }
+    function lockObject(index: int; ro: bool = true; timeout: tTimeout = 1000): unaObject;
+    {*
+    	Allocates resources for new capacity.
     }
     procedure setCapacity(value: unsigned);
     {*
@@ -3753,6 +3761,22 @@ begin
     result := true;
 end;
 
+// --  --
+function unaList.lockObject(index: int; ro: bool; timeout: tTimeout): unaObject;
+begin
+  result := nil;
+  //
+  if (lock(true)) then try
+    //
+    result := get(index);
+    if (nil <> result) then
+      if (not result.acquire(ro, timeout)) then
+	result := nil;
+    //
+  finally
+    unlockRO();
+  end;
+end;
 
 {$IFDEF DEBUG }
 

@@ -29,9 +29,9 @@
 {*
   Contains definition of base types used in other units.
   Most used types are:
-    int = integer;
-    bool = LongBool;
-    unsigned = Cardinal;
+    int = int32/64 depending on target CPU
+    bool = LongBool
+    unsigned = Cardinal
 
   @Author Lake
   @Version 2.5.2009.12 - some cleanup
@@ -69,7 +69,6 @@ type
   end;
 
   uint  = LongWord;     /// universal 32 bit unsigned integer
-
 
   {$EXTERNALSYM unsigned }
   pUnsigned 	= ^unsigned;	/// pointer to value of type "unsigned"
@@ -146,7 +145,7 @@ type
 {$ELSE }
   wString       = wideString;   /// wide string
 {$IFNDEF FPC }
-  wChar         = wideChar;     /// wide char    fastcall
+  wChar         = wideChar;     /// wide char
 {$ENDIF FPC }
 {$ENDIF __AFTER_DB__ }
   //
@@ -222,6 +221,9 @@ type
 
   tInt64Array  = array[0 .. c_max_index_64 - 1] of int64;	/// array of signed 64 bit integers
   pInt64Array = ^tInt64Array;                           	/// pointer to array of signed 64 bit integers
+
+  tUint64Array  = array[0 .. c_max_index_64 - 1] of uint64;	/// array of unsigned 64 bit integers
+  pUint64Array = ^tUint64Array;                           	/// pointer to array of signed 64 bit integers
 
   tUnsignedArray  = array[0 .. c_max_index_PTR - 1] of unsigned;/// array of unsigned 32/64 bit integers
   pUnsignedArray = ^tUnsignedArray;                           	/// pointer to array of unsigned 32/64 bit integers
